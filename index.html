@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Global Underground Radio</title>
+  <style>
+    body { margin: 0; background: #000; font-family: monospace; overflow: hidden; }
+    #radio-bar {
+      position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: rgba(10, 10, 10, 0.85); border: 1px solid #333; color: #0f0;
+      padding: 12px 24px; border-radius: 8px; z-index: 10; display: flex;
+      align-items: center; gap: 15px; box-shadow: 0 0 15px rgba(0, 255, 0, 0.2);
+    }
+    audio { height: 30px; filter: invert(100%); }
+  </style>
+  <script src="//unpkg.com/globe.gl"></script>
+</head>
+<body>
+
+  <div id="radio-bar">
+    <div id="station-name">Click a green dot to tune in...</div>
+    <audio id="player" controls autoplay></audio>
+  </div>
+
+  <div id="globeViz"></div>
+
+  <script>
+    const player = document.getElementById('player');
+    const stationLabel = document.getElementById('station-name');
+
+    // 1. Fetch live stations from Radio-Browser API
+    fetch('https://de1.api.radio-browser.info/json/stations/search?limit=1000&has_geo_info=true&hidebroken=true')
+      .then(res => res.json())
+      .then(stations => {
+        
+        // Clean data for Globe.gl
+        const points = stations.map(s => ({
+          lat: parseFloat(s.geo_lat),
+          lng: parseFloat(s.geo_long),
+          name: s.name,
+          url: s.url_resolved,
+          country: s.countrycode
+        })).filter(p => !isNaN(p.lat) && !isNaN(p.lng));
+
+        // 2. Render 3D Globe
+        const world = Globe()
+          (document.getElementById('globeViz'))
+          .globeImageUrl('//unpkg.com/three-globe/example/img/earth-night.jpg')
+          .pointsData(points)
+          .pointColor(() => '#00ff66')
+          .pointAltitude(0.01)
+          .pointRadius(0.3)
+          .onPointClick(point => {
+            stationLabel.innerText = `${point.name} (${point.country})`;
+            player.src = point.url;
+            player.play();
+          });
+
+        world.controls().autoRotate = true;
+        world.controls().autoRotateSpeed = 0.3;
+      });
+  </script>
+</body>
+</html>
