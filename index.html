@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Global Underground Radio</title>
 
-  <script src="https://unpkg.com/three"></script>
-  <script src="https://unpkg.com/globe.gl"></script>
+  <script src="https://unpkg.com/three@0.147.0/build/three.min.js"></script>
+  <script src="https://unpkg.com/globe.gl@2.32.0/dist/globe.gl.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.6.13/dist/hls.min.js"></script>
 
   <style>
@@ -142,11 +142,12 @@
       <div class="bootLogo"><div class="bootCore"></div></div>
       <div class="bootTitle">Global Underground Radio</div>
       <div class="bootProgress"><div class="bootFill"></div></div>
-      <div class="bootMeta"><span id="bootStatus">Igniting engines...</span></div>
+      <div class="bootMeta"><span id="bootStatus" style="color:#ff5555; font-weight:bold;">Initializing...</span></div>
     </div>
   </div>
 
   <div id="ui">
+    <!-- UI elements identical to previous versions -->
     <div id="topbar">
       <div id="brand" class="glass"><span class="brandOrb"></span><div><strong>Global Underground</strong><small>Live planetary frequencies</small></div></div>
       <div id="searchWrap"><span id="searchIcon">⌕</span><input id="search" autocomplete="off" placeholder="Search world frequencies..."></div>
@@ -174,6 +175,22 @@
   <audio id="audio" preload="none" playsinline></audio>
 
   <script>
+    // 1. GLOBAL ERROR INTERCEPTOR - Catches silent crashes and prints them to the UI
+    window.onerror = function(message, source, lineno, colno, error) {
+      const statusEl = document.getElementById('bootStatus');
+      if (statusEl) {
+        statusEl.style.color = '#ff4444';
+        statusEl.textContent = "CRITICAL JS ERROR: " + message;
+      }
+    };
+    window.onunhandledrejection = function(event) {
+      const statusEl = document.getElementById('bootStatus');
+      if (statusEl) {
+        statusEl.style.color = '#ff4444';
+        statusEl.textContent = "API/PROMISE ERROR: " + (event.reason ? event.reason.message : 'Unknown');
+      }
+    };
+
     const FETCH_LIMIT = 5000; 
     const CACHE_KEY = 'gur_stations_v1';
     const FALLBACK_SERVERS = ['https://de1.api.radio-browser.info', 'https://at1.api.radio-browser.info'];
@@ -182,39 +199,45 @@
     const $ = id => document.getElementById(id);
     const audio = $('audio');
 
-    function updateStatus(text) { if ($('bootStatus'))$('bootStatus').textContent = text; }
-
-    // Renders the Globe instantly before API fetches
-    function initGlobe() {
-      state.globe = Globe()($('#globeViz'))
-        .backgroundColor('#000000')
-        .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
-        .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
-        .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
-        .showAtmosphere(true)
-        .atmosphereColor('#86c9ff')
-        .atmosphereAltitude(0.15)
-        // Set altitude to 4: perfect deep space height inside the clipping plane
-        .pointOfView({ lat: 10, lng: -20, altitude: 4 }, 0);
-
-      state.globe.controls().autoRotate = true;
-      state.globe.controls().autoRotateSpeed = 0.5;
-
-      setTimeout(() => {
-        const directional = state.globe.lights().find(l => l.type === 'DirectionalLight');
-        if (directional) {
-          directional.position.set(1, 0.5, 1); 
-          directional.intensity = 2.5; 
-        }
-      }, 100);
+    function updateStatus(text, color = '#7f8a99') { 
+      const el = $('bootStatus');
+      if (el) { el.textContent = text; el.style.color = color; }
     }
 
-    // Pull down the boot screen and dive to Earth
+    function initGlobe() {
+      try {
+        state.globe = Globe()($('#globeViz'))
+          .backgroundColor('#000000')
+          .backgroundImageUrl('https://unpkg.com/three-globe/example/img/night-sky.png')
+          .globeImageUrl('https://unpkg.com/three-globe/example/img/earth-blue-marble.jpg')
+          .bumpImageUrl('https://unpkg.com/three-globe/example/img/earth-topology.png')
+          .showAtmosphere(true)
+          .atmosphereColor('#86c9ff')
+          .atmosphereAltitude(0.15)
+          .pointOfView({ lat: 10, lng: -20, altitude: 4 }, 0);
+
+        state.globe.controls().autoRotate = true;
+        state.globe.controls().autoRotateSpeed = 0.5;
+
+        setTimeout(() => {
+          if (state.globe && state.globe.lights) {
+            const directional = state.globe.lights().find(l => l.type === 'DirectionalLight');
+            if (directional) { directional.position.set(1, 0.5, 1); directional.intensity = 2.5; }
+          }
+        }, 100);
+      } catch (err) {
+        updateStatus("WebGL Initialization Failed: " + err.message, "#ff4444");
+        throw err; // Stop execution if 3D crashes
+      }
+    }
+
     function hideBootScreen() {
       $('bootScreen').classList.add('done');
       document.body.classList.add('ready');
-      state.globe.pointOfView({ lat: 25, lng: 10, altitude: 1.8 }, 3500);
-      state.globe.controls().autoRotateSpeed = 0.2;
+      if (state.globe) {
+        state.globe.pointOfView({ lat: 25, lng: 10, altitude: 1.8 }, 3500);
+        state.globe.controls().autoRotateSpeed = 0.2;
+      }
     }
 
     async function fetchStations(isBackground = false) {
@@ -226,9 +249,8 @@
       });
       
       try {
-        // AbortController ensures we don't hang indefinitely 
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000); // 8 second strict timeout
+        const timeoutId = setTimeout(() => controller.abort(), 8000); 
 
         const res = await fetch(`${base}/json/stations/search?${params}`, { 
           headers: { Accept: 'application/json' },
@@ -236,25 +258,27 @@
         });
         clearTimeout(timeoutId);
 
-        if (!res.ok) throw new Error('API Error');
+        if (!res.ok) throw new Error('API Request Failed with status: ' + res.status);
         const data = await res.json();
         
-        // Strip heavy data to easily fit inside localStorage (max 5mb)
+        if (!Array.isArray(data)) throw new Error('API returned invalid data format.');
+
         const strippedData = data.filter(r => r.geo_lat && r.geo_long).map(r => ({
-          id: r.stationuuid,
-          name: r.name,
-          country: r.country,
-          lat: Number(r.geo_lat),
-          lng: Number(r.geo_long),
-          tags: r.tags || '',
-          favicon: r.favicon || '',
+          id: r.stationuuid, name: r.name, country: r.country,
+          lat: Number(r.geo_lat), lng: Number(r.geo_long),
+          tags: r.tags || '', favicon: r.favicon || '',
           url: r.url_resolved || r.url
         }));
 
         state.all = strippedData;
         state.filtered = state.all;
         
-        try { localStorage.setItem(CACHE_KEY, JSON.stringify(strippedData)); } catch(e) { console.warn("Cache full"); }
+        // Wrap local storage in try/catch to prevent security errors from crashing the app
+        try { 
+          localStorage.setItem(CACHE_KEY, JSON.stringify(strippedData)); 
+        } catch(e) { 
+          console.warn("Local storage disabled by browser settings. Running purely from RAM."); 
+        }
 
         populateFilters(); renderList(); renderPins();
         
@@ -265,7 +289,7 @@
       } catch (e) {
         console.error("Fetch failed", e);
         if (!isBackground) {
-          updateStatus("Offline/Timeout - Entering anyway...");
+          updateStatus("Network offline or blocked. Entering anyway...", "#ffaa00");
           setTimeout(hideBootScreen, 1500);
         }
       }
@@ -274,12 +298,8 @@
     function renderPins() {
       if (!state.globe) return;
       state.globe.particlesData(state.filtered.length ? [{ items: state.filtered }] : [])
-        .particleList('items')
-        .particleLat('lat')
-        .particleLng('lng')
-        .particleAltitude(0.01)
-        .particlesSize(0.35)
-        .particleColor(() => '#20f28a')
+        .particleList('items').particleLat('lat').particleLng('lng')
+        .particleAltitude(0.01).particlesSize(0.35).particleColor(() => '#20f28a')
         .onParticleClick(s => tune(s));
     }
 
@@ -306,8 +326,10 @@
       $('stationMeta').textContent = s.country;
       $('nowArt').src = s.favicon \vert{}\vert{} 'https://dummyimage.com/96x96/0b1118/20f28a.png&text=GUR';$('playBtn').textContent = '…';
       
-      state.globe.controls().autoRotate = false;
-      state.globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: 0.8 }, 1500);
+      if (state.globe) {
+        state.globe.controls().autoRotate = false;
+        state.globe.pointOfView({ lat: s.lat, lng: s.lng, altitude: 0.8 }, 1500);
+      }
 
       if (state.hls) { state.hls.destroy(); }
       const url = s.url;
@@ -345,33 +367,37 @@
     $('countryFilter').addEventListener('change', () => {$('search').dispatchEvent(new Event('input'));
     });
 
-    // Main Boot Sequence executed instantly
     function boot() {
+      updateStatus("Igniting WebGL Context...");
       initGlobe();
 
-      const cachedData = localStorage.getItem(CACHE_KEY);
+      let cachedData = null;
+      try { 
+        cachedData = localStorage.getItem(CACHE_KEY); 
+      } catch(e) { 
+        console.warn("Storage blocked"); 
+      }
       
       if (cachedData) {
-        // FAST BOOT: User has been here before. Load from local memory immediately.
         try {
           updateStatus("Restoring local coordinates...");
           state.all = JSON.parse(cachedData);
           state.filtered = state.all;
           populateFilters(); renderList(); renderPins();
           
-          setTimeout(hideBootScreen, 400); // Fly right in
-          
-          fetchStations(true); // Quietly refresh data in the background for next time
+          setTimeout(hideBootScreen, 400); 
+          fetchStations(true); 
         } catch(e) {
-          fetchStations(false); // Cache corrupted, fetch fresh
+          fetchStations(false); 
         }
       } else {
-        // FIRST TIME BOOT: Wait for the API, but timeout after 8 seconds
         fetchStations(false);
       }
     }
 
-    boot();
+    // Wait until HTML is parsed before calling boot
+    document.addEventListener("DOMContentLoaded", boot);
+
   </script>
 </body>
 </html>
