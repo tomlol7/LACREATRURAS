@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#25282c">
+  <title>Web DAW — Playlist</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div id="app">
+    <header class="top-toolbar">
+      <div class="brand">
+        <span class="brand-mark">●</span>
+        <span>WEB DAW</span>
+        <span class="brand-sub">PLAYLIST</span>
+      </div>
+
+      <div class="transport-cluster">
+        <button id="playBtn" class="transport-btn transport-primary" title="Play / Pause (Space)">▶</button>
+        <button id="stopBtn" class="transport-btn" title="Stop">■</button>
+        <button id="rewindBtn" class="transport-btn" title="Return to start">|◀</button>
+
+        <label class="tempo-control" title="Tempo in beats per minute">
+          <span>BPM</span>
+          <input id="tempoInput" type="number" min="40" max="240" step="1" value="140">
+        </label>
+
+        <div class="time-readout" id="timeDisplay">00:00:00</div>
+        <div class="beat-readout" id="beatDisplay">Beat 1.00</div>
+      </div>
+
+      <div class="toolbar-spacer"></div>
+
+      <div class="master-control">
+        <span class="control-label">MASTER</span>
+        <input id="masterVolume" class="horizontal-fader" type="range" min="0" max="1.2" step="0.001" value="0.85">
+        <span id="masterVolumeValue" class="value-label">-1.4 dB</span>
+      </div>
+
+      <button id="loadSamplesBtn" class="toolbar-action">LOAD SAMPLES</button>
+      <span id="engineStatus" class="status-pill">ENGINE OFF</span>
+    </header>
+
+    <div class="workspace">
+      <aside class="left-sidebar">
+        <section class="panel-section track-panel">
+          <div class="panel-title-row">
+            <span>TRACKS</span>
+            <button id="addTrackBtn" class="mini-btn">＋</button>
+          </div>
+          <div id="trackList" class="track-list"></div>
+        </section>
+
+        <section class="panel-section sample-panel">
+          <div class="panel-title-row">
+            <span>SAMPLES</span>
+            <button id="refreshSamplesBtn" class="mini-btn" title="Fetch sample URLs again">↻</button>
+          </div>
+          <div id="sampleList" class="sample-list"></div>
+          <div class="sample-help">Drag a sample onto the playlist. Missing URLs fall back to generated test tones.</div>
+        </section>
+
+        <section class="panel-section inspector-panel">
+          <div class="panel-title">CLIP / TRACK INSPECTOR</div>
+
+          <div class="inspector-block">
+            <div class="field-row">
+              <label>Selected clip</label>
+              <span id="selectedClipLabel" class="muted">None</span>
+            </div>
+            <div class="field-row">
+              <label>Pitch (semitones)</label>
+              <span id="pitchValue" class="numeric-readout">0.00</span>
+            </div>
+            <input id="pitchSlider" type="range" min="-24" max="24" step="0.01" value="0" disabled>
+            <div class="hint-row">
+              <span>-24</span><span>0</span><span>+24</span>
+            </div>
+          </div>
+
+          <div class="inspector-block">
+            <div class="panel-title">EFFECTS — SELECTED TRACK</div>
+
+            <div class="fx-row">
+              <label>Low shelf</label>
+              <input id="eqLow" type="range" min="-18" max="18" step="0.1" value="0">
+              <span id="eqLowValue">0 dB</span>
+            </div>
+
+            <div class="fx-row">
+              <label>Peak</label>
+              <input id="eqPeak" type="range" min="-18" max="18" step="0.1" value="0">
+              <span id="eqPeakValue">0 dB</span>
+            </div>
+
+            <div class="fx-row">
+              <label>High shelf</label>
+              <input id="eqHigh" type="range" min="-18" max="18" step="0.1" value="0">
+              <span id="eqHighValue">0 dB</span>
+            </div>
+
+            <div class="fx-row">
+              <label>Drive</label>
+              <input id="drive" type="range" min="0" max="100" step="1" value="8">
+              <span id="driveValue">8%</span>
+            </div>
+
+            <div class="fx-row">
+              <label>Chorus</label>
+              <input id="chorus" type="range" min="0" max="1" step="0.01" value="0.16">
+              <span id="chorusValue">16%</span>
+            </div>
+
+            <div class="fx-row">
+              <label>Reverb</label>
+              <input id="reverb" type="range" min="0" max="1" step="0.01" value="0.12">
+              <span id="reverbValue">12%</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <main class="playlist-area">
+        <div class="playlist-toolbar">
+          <div class="tool-group">
+            <span class="tool-label">SNAP</span>
+            <select id="snapSelect">
+              <option value="1">1 beat</option>
+              <option value="0.5">1/2</option>
+              <option value="0.25" selected>1/4</option>
+              <option value="0.125">1/8</option>
+              <option value="0.0625">1/16</option>
+            </select>
+          </div>
+          <div class="tool-group">
+            <span class="tool-label">VIEW</span>
+            <button id="zoomOutBtn" class="tool-btn">−</button>
+            <span id="zoomValue" class="zoom-value">48 px</span>
+            <button id="zoomInBtn" class="tool-btn">＋</button>
+          </div>
+          <div class="tool-group">
+            <button id="clearPlaylistBtn" class="tool-btn danger">CLEAR ALL</button>
+          </div>
+          <div class="playlist-help">Double-click an empty lane to add the selected sample. Press Space to play/pause.</div>
+        </div>
+
+        <div id="playlistViewport" class="playlist-viewport">
+          <div id="playlistContent" class="playlist-content">
+            <div id="ruler" class="ruler"></div>
+            <div id="laneArea" class="lane-area"></div>
+          </div>
+          <div class="scroll-shadow-right"></div>
+        </div>
+
+        <div class="bottom-status-bar">
+          <span id="cursorStatus">Cursor: 1.00 beats</span>
+          <span id="selectionStatus">No selection</span>
+          <span class="bottom-spacer"></span>
+          <span>Web Audio API • Lookahead Scheduler</span>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <template id="trackTemplate">
+    <div class="track-row" data-track-id="">
+      <div class="track-index"></div>
+      <div class="track-name"></div>
+      <div class="track-controls">
+        <button class="track-button mute-btn">M</button>
+        <button class="track-button solo-btn">S</button>
+        <input class="knob-input volume-knob" type="range" min="0" max="1.25" step="0.001" value="0.85" aria-label="Track volume">
+        <input class="knob-input pan-knob" type="range" min="-1" max="1" step="0.001" value="0" aria-label="Track pan">
+      </div>
+    </div>
+  </template>
+
+  <template id="sampleTemplate">
+    <div class="sample-item" draggable="true" data-sample-id="">
+      <span class="sample-dot"></span>
+      <span class="sample-name"></span>
+      <span class="sample-state"></span>
+    </div>
+  </template>
+
+  <script src="./engine.js"></script>
+</body>
+</html>
