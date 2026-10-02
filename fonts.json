@@ -1,0 +1,26 @@
+[
+  {
+    "id": "matrix-code",
+    "name": "Matrix Code NFI",
+    "author": "Thomas E. Harvey",
+    "category": "pixel",
+    "url": "/fonts/matrix-code.woff2",
+    "css_weight": "400"
+  },
+  {
+    "id": "scanline-mono",
+    "name": "Scanline Mono",
+    "author": "Your Name Here",
+    "category": "monospace",
+    "url": "/fonts/scanline-mono.woff2",
+    "css_weight": "400"
+  },
+  {
+    "id": "glitch-display",
+    "name": "Glitch Display",
+    "author": "Your Name Here",
+    "category": "display",
+    "url": "/fonts/glitch-display.woff2",
+    "css_weight": "700"
+  }
+]

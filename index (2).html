@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>URFONT // open-source font directory</title>
+  <meta name="description" content="URFONT: a hyper-fast, open-source font directory for developers and indie web creators. Preview fonts, copy @font-face CSS, generate PNG banners.">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#000000">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%23000'/%3E%3Ctext x='2' y='13' font-size='14' font-family='monospace' font-weight='bold' fill='%2300ff41'%3EU%3C/text%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body class="crt">
+  <a class="skip-link" href="#grid">Skip to fonts</a>
+
+  <!-- ===== TOP NAV ===== -->
+  <header class="nav">
+    <a class="logo" href="./" aria-label="URFONT home">URFONT<span class="cursor" aria-hidden="true">_</span></a>
+
+    <div class="nav-search" role="search">
+      <span class="prompt" aria-hidden="true">&gt;</span>
+      <label class="sr-only" for="search">Search fonts</label>
+      <input id="search" type="search" placeholder="search fonts, authors, categories   ( / )" autocomplete="off" spellcheck="false">
+    </div>
+
+    <!-- TODO: point this at your repo's issue template or CONTRIBUTING.md -->
+    <a class="nav-link" href="https://github.com/your-username/urfont/issues/new" target="_blank" rel="noopener noreferrer">[ Submit a Font ]</a>
+  </header>
+
+  <main>
+    <h1 class="sr-only">URFONT: open-source font directory</h1>
+
+    <!-- ===== GLOBAL PREVIEW + FILTERS ===== -->
+    <section class="toolbar" aria-label="Preview controls">
+      <div class="field field-grow">
+        <label for="preview-text">Global preview</label>
+        <input id="preview-text" class="input" type="text" maxlength="200" autocomplete="off" spellcheck="false" placeholder="Type here. Every card updates instantly...">
+      </div>
+
+      <div class="field field-size">
+        <label for="preview-size">Size <output id="preview-size-out" for="preview-size">36px</output></label>
+        <input id="preview-size" type="range" min="16" max="96" step="2" value="36">
+      </div>
+
+      <div class="toolbar-row">
+        <div id="filters" class="chips" role="group" aria-label="Filter by category"></div>
+        <p id="status" class="status" role="status">&gt; booting...</p>
+      </div>
+    </section>
+
+    <!-- ===== FONT GRID ===== -->
+    <section id="grid" class="grid" aria-busy="true" aria-label="Fonts">
+      <p class="loading">&gt; loading fonts.json<span class="cursor" aria-hidden="true">_</span></p>
+    </section>
+
+    <p id="empty" class="message" hidden></p>
+  </main>
+
+  <footer class="foot">
+    <span>URFONT // open source // zero backend</span>
+    <span class="hotkeys">
+      <button id="crt-toggle" class="link-btn" type="button" aria-pressed="true"><kbd>T</kbd> CRT scanlines: ON</button>
+      <span><kbd>/</kbd> search</span>
+      <span><kbd>Esc</kbd> close</span>
+    </span>
+  </footer>
+
+  <!-- ===== PNG BANNER GENERATOR (modal) ===== -->
+  <dialog id="banner-modal" class="modal" aria-labelledby="banner-title">
+    <div class="window">
+      <div class="titlebar">
+        <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+        <h2 id="banner-title">png_banner_generator.exe</h2>
+        <button id="banner-close" class="btn-x" type="button" aria-label="Close banner generator">[X]</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="controls">
+          <div class="control">
+            <label for="banner-font">Font</label>
+            <select id="banner-font" class="input"></select>
+          </div>
+
+          <div class="control">
+            <label for="banner-text">Text</label>
+            <textarea id="banner-text" class="input" rows="4" maxlength="240" spellcheck="false" autofocus></textarea>
+          </div>
+
+          <div class="control">
+            <label for="banner-size">Size <output id="banner-size-out" for="banner-size">110</output></label>
+            <input id="banner-size" type="range" min="24" max="240" step="2" value="110">
+          </div>
+
+          <div class="control">
+            <label for="banner-dim">Canvas</label>
+            <select id="banner-dim" class="input">
+              <option value="1200x630" selected>1200 x 630 // Open Graph</option>
+              <option value="1280x640">1280 x 640 // GitHub social</option>
+              <option value="1500x500">1500 x 500 // X header</option>
+              <option value="1920x1080">1920 x 1080 // 16:9</option>
+            </select>
+          </div>
+
+          <label class="check"><input id="banner-glow" type="checkbox" checked> Neon glow</label>
+        </div>
+
+        <div class="stage">
+          <canvas id="banner-canvas" width="1200" height="630" aria-label="Banner preview"></canvas>
+          <p id="banner-note" class="note" role="status"></p>
+          <div class="actions">
+            <button id="banner-download" class="btn btn-primary" type="button">Download .png</button>
+            <button id="banner-cancel" class="btn" type="button">Close</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </dialog>
+
+  <noscript>
+    <p class="message" style="margin:2rem">URFONT needs JavaScript to load fonts.json and render the directory.</p>
+  </noscript>
+</body>
+</html>
